@@ -84,21 +84,17 @@
     </author>
 
     <author fullname="Jen Linkova" initials="J." surname="Linkova">
-      <organization>Google</organization>
-
-      <address>
+	    <organization>Google</organization>
+	    <address>
         <postal>
-          <street/>
-
-          <city>Mountain View</city>
-
-          <code>94043</code>
-
-          <region>California</region>
-
-          <country>USA</country>
+          <street>1 Darling Island Rd</street>
+          <city>Pyrmont</city>
+          <region>NSW</region>
+          <code>2009</code>
+          <country>AU</country>
         </postal>
 
+        <phone></phone>
         <email>furry@google.com</email>
       </address>
     </author>
