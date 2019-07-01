@@ -1100,16 +1100,13 @@ D=::/0                    NH=R8
         H31 needs to send a packet with D=2001:db8:0:1234::101 in order to
         reach H101. So H31 have to choose between using S=2001:db8:0:a010::31
         or S=2001:db8:0:b010::31 as the source address for this packet. We go
-        through the rules for source address selection in Section 5 of <xref
-		target="RFC6724"/>. </t>
-<t>
-	Rule 1 (Prefer same address) is not useful to
+	through the rules for source address selection in Section 5 of <xref target="RFC6724"/>. </t>
+
+<t> Rule 1 (Prefer same address) is not useful to
         break the tie between source addresses, because neither the candidate
-	source addresses equals the destination address. 
-</t>
-<t>
-	Rule 2 (Prefer
-        appropriate scope) is also not used in this scenario, because both
+	source addresses equals the destination address.  </t>
+
+<t> Rule 2 (Prefer appropriate scope) is also not used in this scenario, because both
         source addresses and the destination address have global scope.</t>
 
         <t>Rule 3 (Avoid deprecated addresses) applies to an address that has
@@ -2039,8 +2036,6 @@ Prefix                 Precedence       Label
 				<t>The SADR domain is usually limited by the multihomed site border.</t>
 				<t>The minimal deployable scenario requires enabling SADR on all SERs and including them into a single SADR domain.</t>
 				<t>As discussed in <xref target="sec_simple_not_dir_conn"/>, extending the connected SADR domain beyond that point down to the first-hop routers can produce more efficient forwarding paths and allow the network to fully benefit from SADR. it would also simplify the operation of the SADR domain.</t>
-				<t>
-				</t>
 
 			</list>
 		</t>
@@ -2162,7 +2157,11 @@ Prefix                 Precedence       Label
 
     <section anchor="Acknowledgements" title="Acknowledgements">
 	    <t>The original outline was suggested by Ole Troan.</t>
-	    <t>The authors would like to thank the following people (in alphabetical order) for their review and feedback: Olivier Bonaventure, Deborah Brungard, Brian E Carpenter, Lorenzo Colitti, Roman Danyliw, Benjamin Kaduk, Suresh Krishnan, Mirja Kühlewind, David Lamparter, Nicolai Leymann, Acee Lindem, Philip Matthewsu, Robert Raszuk, Alvaro Retana, Dave Thaler, Michael Tüxen, Martin Vigoureux, Éric Vyncke, Magnus Westerlund.
+	    <t>
+		    The authors would like to thank the following people (in alphabetical order) for their review and feedback:
+		    Olivier Bonaventure, Deborah Brungard, Brian E Carpenter,
+		    Lorenzo Colitti, Roman Danyliw, Benjamin Kaduk, Suresh Krishnan, Mirja Kuhlewind,
+		    David Lamparter, Nicolai Leymann, Acee Lindem, Philip Matthewsu, Robert Raszuk, Alvaro Retana, Dave Thaler, Michael Tuxen, Martin Vigoureux, Eric Vyncke, Magnus Westerlund.
 	    </t>
     </section>
   </middle>
