@@ -110,7 +110,7 @@
     <workgroup>Routing Working Group</workgroup>
 
     <abstract>
-      <t>Connecting an enterprise site to multiple ISPs using
+      <t>Connecting an enterprise site to multiple ISPs over IPv6 using
       provider-assigned addresses is difficult without the use of some form of
       Network Address Translation (NAT). Much has been written on this topic
       over the last 10 to 15 years, but it still remains a problem without a
@@ -120,9 +120,10 @@
       packets. It also requires routers at the site to take into account those
       source addresses when forwarding packets out towards the ISPs.</t>
 
-      <t>This document attempts to define a complete solution to this problem.
+      <t>This document examines currently available mechanisms for providing a solution
+to this problem for a broad range of enterprise topologies.
       It covers the behavior of routers to forward traffic taking into account
-      source address, and it covers the behavior of host to select appropriate
+      source address, and it covers the behavior of hosts to select appropriate
       source addresses. It also covers any possible role that routers might
       play in providing information to hosts to help them select appropriate
       source addresses. In the process of exploring potential solutions, this
@@ -147,7 +148,7 @@
       ISPs using provider-assigned (PA) addresses, instead of PI addresses.
       Multihoming with provider-assigned addresses is typically less expensive
       for the enterprise relative to using provider-independent addresses as it does not
-      require obtaining and maintaining PI address space as well as operating BGP on the site border.
+      require obtaining and maintaining PI address space as well as running BGP between the enterprise and the ISPs (for small/meduim networks running BGP might be not just undesirable but impossible, especially if residential-type ISP connections are used).
       PA multihoming is also a practice that should be facilitated and encouraged
       because it does not add to the size of the Internet routing table,
       whereas PI multihoming does. Note that PA is also used to mean
@@ -175,14 +176,18 @@
       reaches its destination somewhere on the Internet, the return packet
       will be sent back with a destination address in prefix-A. The return
       packet will be routed over the Internet to ISP-A, but it will not be
-      delivered to the multihomed site because its link with ISP-A has failed.
+      delivered to the multihomed site because the site uplink with ISP-A has failed.
       Two-way communication would require some arrangement for ISP-B to
       advertise prefix-A when the uplink to ISP-A fails.</t>
 
       <t>Note that the same may be true with a provider that does not
       implement BCP 38, if his upstream provider does, or has no corresponding
-      route. The issue is not that the immediate provider implements ingress
-      filtering; it is that someone upstream does, or lacks a route.</t>
+      route to deliver the ingress traffic to the multihomed site. The issue is not that the immediate provider implements ingress
+      filtering; it is that someone upstream does (so egress traffic is blocked), or lacks a route (causing blackholing of the ingress traffic).</t>
+
+<t>
+	Another issue with asymmetric traffic flow (when the egress traffic leaves the site via one ISP but the return traffic enters the site via another uplink) is related to stateful firewalls/middleboxes. Keeping state in that case might be problematic, even impossible.
+</t>
 
       <t>With IPv4, this problem is commonly solved by using <xref
       target="RFC1918"/> private address space within the multi-homed site and
@@ -205,16 +210,14 @@
       target="sec_nptv6"/>, for more discussion of NPTv6.</t>
 
       <t>This document defines routing requirements for enterprise multihoming
-      using provider-assigned IPv6 addresses. We have made no attempt to write
-      these requirements in a manner that is agnostic to potential solutions.
-      Instead, this document focuses on the following general class of
+      This document focuses on the following general class of
       solutions.</t>
 
       <t>Each host at the enterprise has multiple addresses, at least one from
       each ISP-assigned prefix. Each host, as discussed in <xref
       target="sec_host_address_selection_algo"/> and <xref target="RFC6724"/>,
       is responsible for choosing the source address applied to each packet it
-      sends. A host SHOULD be able respond dynamically to the failure of an
+      sends. A host is expected to be able respond dynamically to the failure of an
       uplink to a given ISP by no longer sending packets with the source
       address corresponding to that ISP. Potential mechanisms for the
       communication of changes in the network to the host are Neighbor
@@ -237,7 +240,7 @@
 		enterprise networking environments in which this solution is expected to 
 		operate. The discussion of <xref target="sec_enterprise_req"/> uses the concepts of 
 		source-prefix-scoped routing advertisements and forwarding tables 
-		without stopping to provide a precise description of how 
+		and provides a description of how 
 		source-prefix-scoped routing advertisements are used to generate 
 		source-prefix-scoped forwarding tables. Instead, this detailed 
 		description is provided in <xref target="sec_method"/>. <xref target="sec_host_mechanisms"/> discusses existing and 
@@ -286,6 +289,12 @@
 		    LLA (Link-Local Address): IPv6 Unicast Address from fe80::/10 prefix (<xref target="RFC4291"/>).
 	    </t>
 	    <t>
+		    ULA (Unique Local IPv6 Unicast Address): IPv6 unicast addresses from FC00::/7 prefix. They are globally unique and intended for local communications (<xref target="RFC4193"/>).
+	    </t>
+	    <t>
+		    GUA (Global Unicast Address): globally routable IPv6 addresses of the global scope (<xref target="RFC4291"/>).
+	    </t>
+	    <t>
 		    SLAAC (IPv6 Stateless Address Autoconfiguration): a stateless process of configuring network stack on IPv6 hosts (<xref target="RFC4862"/>).
 	    </t>
 	    <t>
@@ -300,7 +309,7 @@
     </section>
 
     <section anchor="sec_enterprise_req"
-             title="Enterprise Multihoming Requirements">
+             title="Enterprise Multihoming Use Cases">
       <section anchor="sec_simple_scenario"
                title="Simple ISP Connectivity with Connected SERs">
         <t>We start by looking at a scenario in which a site has connections
@@ -400,7 +409,7 @@
         slightly by inserting R7, so that SERa and SERb are no longer directly
         connected. With this topology, it is not enough to just enable SADR
         routing on SERa and SERb to support PA multi-homing. There are two
-        solutions to ways to enable PA multihoming in this topology.</t>
+        solutions to enable PA multihoming in this topology.</t>
 
         <figure align="center" anchor="fig_simple_not_dir_conn"
                 title="Simple ISP Connectivity Where SERs Are Not Directly Connected">
@@ -467,7 +476,7 @@
         should be able to communicate with each other using either of their
         source addresses without restriction. For example, H31 should be able
         to communicate with H41 using a packet with S=2001:db8:0:a010::31,
-        D=2001:db8:0:b010::41, regardless of the state of uplink to ISP-B.</t>
+        D=2001:db8:0:b020::41, regardless of the state of uplink to ISP-B.</t>
 
         <t>These goals can be accomplished by having all of the routers in the
         network continue to originate normal unscoped destination routes for
@@ -680,7 +689,8 @@
         only two ISPs, this solution allows for connections to an arbitrary
         number of ISPs to be supported. However, when evaluating scalable
         implementations of the solution, it would be reasonable to assume that
-        the maximum number of ISPs that a site would connect to is five.</t>
+	the maximum number of ISPs that a site would connect to is five (topologies with two redundant routers
+	each having two uplinks to different ISPs plus a tunnel to a headoffice acting as fifth one are not unheard of).</t>
 
         <t>It is also useful to note that the prefixes assigned to the site by
         different ISPs will not overlap. This must be the case, since the
@@ -695,8 +705,8 @@
         connecting the two site exit routers, SERa and SERb. The topology
         could also be simplified by having the uplinks to ISP-A and ISP-B both
         connected to the same site exit router. However, it is the aim of this
-        draft to provide a solution that applies to a broad a range of
-        enterprise site network topologies, so this draft focuses on providing
+        document to provide a solution that applies to a broad a range of
+        enterprise site network topologies, so this document focuses on providing
         a solution to the more general case. The simplified cases will also be
         supported by this solution, and there may even be optimizations that
         can be made for simplified cases. This solution however needs to
@@ -741,10 +751,10 @@
           with propagating routes to more-specific-source-prefix-scoped forwarding tables should they exist.</t>
         </list></t>
 
-      <t>The forward tables produced by this process are used in the following
+      <t>The forwarding tables produced by this process are used in the following
 	      way to forward packets. <list style="numbers">
 		      <t>Select the most specific (longest prefix match) source-prefix-scoped forwarding table
-			      entries that matches the source address of the packet (again, the unscoped
+			      that matches the source address of the packet (again, the unscoped
 			      forwarding table is considered to be scoped to ::/0). </t>
 		      <t>Look up the destination address of the packet in
 			             the selected forwarding table to
@@ -997,18 +1007,12 @@ D=::/0                    NH=R8
 ]]></artwork>
       </figure>
 
-      <t>Any traffic that needs to exit the site will eventually hit a
-      SADR-capable router. Once that traffic enters the SADR-capable domain,
-      then it will not leave that domain until it exits the site. This
-      property is required in order to guarantee that there will not be
-      routing loops involving SADR-capable and non-SADR-capable routers.</t>
+      <t>As all SERs belong to the SADR domain any traffic that needs to exit the site will eventually hit a SADR-capable router.  To prevent routing loops involving SADR-capable and non-SADR-capable routers, traffic that enters the SADR-capable domain does not leave the domain until it exits the site. Therefore all SADR-capable routers with the domain MUST be logically connected.</t>
 
       <t>Note that the mechanism described here for converting
       source-prefix-scoped destination prefix routing advertisements into
-      forwarding state is somewhat different from that proposed in <xref
-      target="I-D.ietf-rtgwg-dst-src-routing"/>. The method described in the current
-      document is functionally equivalent, but it is intended to be easier 
-	  to understand for enterprise network operators.</t>
+      forwarding state is somewhat different from that proposed in <xref target="I-D.ietf-rtgwg-dst-src-routing"/>. The method described in the current
+      document is functionally equivalent, but it is based on application of existing mechanisms for the described scenarios.</t>
     </section>
 
     <section anchor="sec_host_mechanisms"
@@ -1021,6 +1025,9 @@ D=::/0                    NH=R8
       choose the correct source address. We also look at what role, if any,
       the routers may play in providing information that helps hosts to choose
       source addresses.</t>
+<t>
+	It should be noted that this section discussed how hosts could select the source address for new connections. Any connection which already exists on a host is bound to the specific source address which can not be changed. <xref target="sec_conn_pre"/> discusses the connections preservation issue in more details.
+</t>
 
       <t>Any host that needs to be able to send traffic using the uplinks to a
       given ISP is expected to be configured with an address from the prefix
@@ -1033,9 +1040,9 @@ D=::/0                    NH=R8
       <t>If all of the ISP uplinks are working, the choice of source address
       by the host may be driven by the desire to load share across ISP
       uplinks, or it may be driven by the desire to take advantage of certain
-      properties of a particular uplink or ISP. If any of the ISP uplinks is
-      not working, then the choice of source address by the host can determine
-      if packets get dropped.</t>
+      properties of a particular uplink or ISP (if some information about various path properties has been made availabe to the host somehow - see <xref target="I-D.ietf-intarea-provisioning-domains"/> as an example). If any of the ISP uplinks is
+      not working, then the choice of source address by the host can cause 
+      packets to get dropped.</t>
 
       <t>How a host should make good decisions about source address selection
       in a multihomed site is not a solved problem. We do not attempt to solve
@@ -1047,7 +1054,7 @@ D=::/0                    NH=R8
       <t>An external host initiating communication with a host internal to a
       PA multihomed site will need to know multiple addresses for that host in
       order to communicate with it using different ISPs to the multihomed
-      site. These addresses are typically learned through DNS. (For
+      site (knowing just one address would undermine all benefits of redundant connectivity provided by multihoming). These addresses are typically learned through DNS. (For
       simplicity, we assume that the external host is single-homed.) The
       external host chooses the ISP that will be used at the remote multihomed
       site by setting the destination address on the packets it transmits. For
@@ -1056,7 +1063,7 @@ D=::/0                    NH=R8
       internal host has no choice but to use the destination address in the
       received packet as the source address of the transmitted packet.</t>
 
-      <t>For a session originated by a host internal to the multi-homed site,
+      <t>For a session originated by a host inside the multi-homed site,
       the decision of what source address to select is more complicated. We
       consider three main methods for hosts to get information about the
       network. The two proactive methods are Neighbor Discovery Router
@@ -1066,7 +1073,7 @@ D=::/0                    NH=R8
       advertisements.</t>
 
       <t>First we look at how a host is currently expected to select the
-	      source and destination address with which it sends a packet.</t>
+	      source and destination address with which it sends a packet for a new connection.</t>
 
       <section anchor="sec_host_address_selection_algo"
                title="Source Address Selection Algorithm on Hosts">
@@ -1094,9 +1101,14 @@ D=::/0                    NH=R8
         reach H101. So H31 have to choose between using S=2001:db8:0:a010::31
         or S=2001:db8:0:b010::31 as the source address for this packet. We go
         through the rules for source address selection in Section 5 of <xref
-        target="RFC6724"/>. Rule 1 (Prefer same address) is not useful to
+		target="RFC6724"/>. </t>
+<t>
+	Rule 1 (Prefer same address) is not useful to
         break the tie between source addresses, because neither the candidate
-        source addresses equals the destination address. Rule 2 (Prefer
+	source addresses equals the destination address. 
+</t>
+<t>
+	Rule 2 (Prefer
         appropriate scope) is also not used in this scenario, because both
         source addresses and the destination address have global scope.</t>
 
@@ -1145,7 +1157,7 @@ D=::/0                    NH=R8
         Section 2.1 of <xref target="RFC6724"/>, Label(2001:db8:0:a010::31) =
         5, Label(2001:db8:0:b010::31) = 5, and Label(2001:db8:0:1234::101) =
         5. So with the default policy, Rule 6 does not break the tie. However,
-        the algorithms in <xref target="RFC6724"/> are defined in such as way
+        the algorithms in <xref target="RFC6724"/> are defined in such a way
         that non-default address selection policy tables can be used. <xref
         target="RFC7078"/> defines a way to distribute a non-default address
         selection policy table to hosts using DHCPv6. So even though the
@@ -1212,7 +1224,11 @@ D=::/0                    NH=R8
         source address. The first is when both uplinks are working. The second
         is when one uplink has failed. The third one is a situation when one
         failed uplink has recovered. The last one is failure of both (all)
-        uplinks.</t>
+	uplinks.</t>
+<t>
+	It should be noted that <xref target="RFC6724"/> defines the default behaviour for IPv6 hosts. The applications and uppler-layer protocols can make their own choices on selecting source addresses. 
+However the mechanism proposed in this document attempts to ensure that the subset of source addresses available for applications and upper-layer protocols is selected with the up-to-date network state in mind.
+</t>
       </section>
 
       <section anchor="sec_both_uplinks_working"
@@ -1411,7 +1427,7 @@ Prefix                 Precedence       Label
           address is wrong. Instead use a source address in
           S=2001:db8:0:a000::/52.". </t>
 
-          <t>However using ICMPv6 for signalling source address information
+          <t>However using ICMPv6 for signaling source address information
           back to hosts introduces new challenges. Most routers currently have
           software or hardware limits on generating ICMP messages. A site
           administrator deploying a solution that relies on the SERs
@@ -1420,13 +1436,13 @@ Prefix                 Precedence       Label
           is still likely that ICMP message generation limits will be reached.
           As a result hosts would not receive ICMPv6 back which in turn leads
           to traffic blackholing and poor user experience. To improve the
-          scalability of ICMPv6-based signalling hosts SHOULD cache the
+          scalability of ICMPv6-based signaling hosts SHOULD cache the
           preferred source address (or prefix) for the given destination
           (which in turn might cause issues in case of the corresponding
           ISP uplinks failure - see <xref target="sec_one_uplink_failed"/>). In
           addition, the same source prefix SHOULD be used for other
           destinations in the same /64 as the original destination address.
-          The source prefix SHOULD have a specific lifetime. Expiration of the
+          The source prefix to the destination mapping SHOULD have a specific lifetime. Expiration of the
           lifetime SHOULD trigger the source address selection algorithm
           again.</t>
 
@@ -1446,8 +1462,8 @@ Prefix                 Precedence       Label
 		  As currently defined, the ICMPv6 message does not provide 
 		  a mechanism to communication information about which source prefix 
 		  should be used for a retransmitted packet.  The current document does not 
-		  define such a mechanism.  However, we note that this might be a useful extension
-		  to define in a different document.  </t>
+		  define such a mechanism  but it might be a useful extension
+		  to define in a different document. However this approach has some security implications such as an ability for an attacker to send spoofed ICMPv6 messages to signal invalid/unreachable source prefix causing DoS-type attack.</t>
         </section>
 
         <section anchor="sec_both_working_summary"
@@ -1472,7 +1488,7 @@ Prefix                 Precedence       Label
           <t>At the same time Router Advertisements provide a reliable
           mechanism to influence source address selection process via PIO, RIO
           and default router preferences. As all those options have been
-          standardized by IETF and are supported by various operating systems,
+          standardized by IETF and are supported by various operating systems
           no changes are required on hosts. First-hop routers in the
           enterprise network need to be able of sending different RAs for
           different SLAAC prefixes (either based on scoped forwarding tables
@@ -1654,13 +1670,10 @@ Prefix                 Precedence       Label
           forward it to ISP-A. As discussed above, if we are willing to extend
           ICMPv6, SERa can even tell H31 what source address it should use to
           reach that destination. The expected host behaviour has been
-          discussed in <xref target="sec_both_working_icmpv6"/>. Potential
-          issue with using ICMPv6 for signalling source address issues back to
-          hosts is that uplink to an ISP-B failure immediately invalidates
-          source addresses from 2001:db8:0:b000::/52 for all hosts which
-          triggers a large number of ICMPv6 being sent back to hosts - the
-          same scalability/rate limiting issues discussed in <xref
-          target="sec_both_working_icmpv6"/> would apply.</t>
+	  discussed in <xref target="sec_both_working_icmpv6"/>. 
+	  Using ICMPv6 would have the same scalability/rate limiting issues discussed in <xref
+		  target="sec_both_working_icmpv6"/>. ISP-B uplink failure immidiately makes source addresses from 2001:db8:0:b000::/52 unsuitable for external communication and might trigger a large number of ICMPv6 packets being sent to hosts in that subnet.
+  </t>
         </section>
 
         <section anchor="sec_uplink_failed_summary"
@@ -1826,7 +1839,7 @@ Prefix                 Precedence       Label
           of ULA there is no Internet connectivity from ULA sources but they
           can be used to reach another ULA destinations. Note that ULA usage
           could be particularly useful if all ISPs assign prefixes via
-          DHCP-PD. In the absence of ULAs uplinks failure hosts would lost all
+          DHCP-PD. In the absence of ULAs upon the all uplinks failure hosts would lost all
           their GUAs upon prefix lifetime expiration which again makes
 	  intra-site communication impossible.</t>
   <t>
@@ -1912,9 +1925,9 @@ Prefix                 Precedence       Label
         <t>The RA-based solution relies heavily on hosts correctly implementing
         default address selection algorithm as defined in <xref target="RFC6724"/>.
         While the basic (and most common) multihoming scenario (two or more Internet
-        uplinks, no 'wall gardens') would work for any host supporting the minimal
+        uplinks, no 'walled gardens') would work for any host supporting the minimal
         implementation of <xref target="RFC6724"/>, more complex use cases (such as 
-        "wall garden" and other scenarios when some ISP resources can only be reached from
+        "walled garden" and other scenarios when some ISP resources can only be reached from
         that ISP address space) require that hosts support Rule 5.5 of the default address
         selection algorithm. There is some evidence that not all host OSes
         have that rule implemented currently.  However it should be noted that 
@@ -1929,6 +1942,19 @@ Prefix                 Precedence       Label
         as discussed in <xref target="RFC8028"/>. </t>
 
       </section>
+      <section anchor="sec_conn_pre" title="Solution Limitations">
+	      <section anchor="sec_conn_pre_1" title="Connections Preservation">
+        <t>
+                The proposed solution is not designed to preserve connection state in case of an uplink failure. When all uplinks to an ISP go down all transport connections established to/from that ISP address space will be interrupted (unless the transport protocol has specific multihoming support). That behaviour is similar to the scenario of IPv4 multihoming with NAT when an uplink failure causes all connections to be NATed to completely different public IPv4 addresses. While it does sound suboptimal, it is determined by the nature of PA address space: if all uplinks to the particular ISP have failed, there is no path for the ingress traffic to reach the site and the egress traffic is supposed to be dropped by the <xref target="RFC2827">BCP38</xref> ingress filters. The only potential way to overcome this limitation would be running BGP with all ISPs and advertise all site prefixes to all uplinks - a solution which shares all drawbacks of using PI address space without having its benefits. Networks willing and capable of running BGP and using PI are out of scope of this document.
+        </t>
+        <t>
+                It should be noted that in case of IPv4 NAT-based multihoming uplink recovery could cause connection interruptions as well (unless packet forwarding is integrated with existing NAT sessions tracking so the egress interface for the existing sessions is not changed). However the proposed solution has a benefit of preserving the existing sessions during/after the failed uplink restoration. Unlike the uplink failure event which causes all addresses from the affected prefix to be deprecated the recovery would just add new preferred addresses to a host without making any addresses unavailable. Therefore connections estavlished to/from those addresses do not have to be interrupted.
+        </t>
+        <t>
+                While it's desirable for active connections to survive ISP failover events, for sites using PA address space such events affect the reachability of IP addresses assigned to hosts. Unless the transport (or even higher level protocols) are capable of suviving the host renumbering, the active connections will be broken. The proposed solution focuses on minimizing the impact of failover for new connections and for multipath-aware protocols.
+        </t>
+      </section>
+        </section>
 	  
       <section anchor="sec_other_params" title="Other Configuration Parameters">
         <section anchor="sec_dns" title="DNS Configuration">
@@ -1941,7 +1967,7 @@ Prefix                 Precedence       Label
         and a DNS Search List to IPv6 hosts. Using RDNSS together with 'scoped' RAs
         as described above would allow a first-hop router (R3 in the <xref target="fig_isp_service"/>) to send
         DNS server addresses and search lists provided by each ISP (or the corporate DNS servers
-        addresses if the enterprise is running its own DNS servers).</t>
+        addresses if the enterprise is running its own DNS servers - as discussed below DNS split-horizon problem is to hard to solve without running a local DNS server).</t>
 
         <t>As discussed in <xref target="sec_all_uplinks_failed_ra"/>, failure of all ISP uplinks
         would cause deprecation of all addresses assigned to a host from the address space
@@ -1976,15 +2002,22 @@ Prefix                 Precedence       Label
 		for packets to the DNS server.
 	</t>
 
-        <t>It should be noted that <xref target="RFC8106"/> explicitly prohibits using DNS information if the RA router Lifetime
+        <t>It should be noted that <xref target="RFC6106"/> explicitly prohibits using DNS information if the RA router Lifetime
         expired: "An RDNSS address or a DNSSL domain name MUST be used only as
         long as both the RA router Lifetime (advertised by a Router
         Advertisement message) and the corresponding option
         Lifetime have not expired.". Therefore hosts might ignore RDNSS information provided
         in ULA-scoped RAs as those RAs would have router lifetime set to 0. However the updated version of
         RFC6106 (<xref target="RFC8106"/>) has that requirement removed.
-        </t>
-        </section>
+</t>
+<t>
+	As discussed above the DNS split-horizon problem and selecting the correct DNS server in a multihomed envinroment is not an easy one to solve. The proper solution would require hosts to support the concept of  multiple Provisioning
+   Domains (PvD, a set of configuration information associated with a
+   network, <xref target="RFC7556"/>).
+
+</t>
+</section>
+
       </section>
     </section>
 
@@ -2005,7 +2038,9 @@ Prefix                 Precedence       Label
 			<list style="symbols">
 				<t>The SADR domain is usually limited by the multihomed site border.</t>
 				<t>The minimal deployable scenario requires enabling SADR on all SERs and including them into a single SADR domain.</t>
-				<t>As discussed in <xref target="sec_simple_not_dir_conn"/>, extending the connected SADR domain beyond that point can produce more efficient forwarding paths and allow the network to fully benefit from SADR.</t>
+				<t>As discussed in <xref target="sec_simple_not_dir_conn"/>, extending the connected SADR domain beyond that point down to the first-hop routers can produce more efficient forwarding paths and allow the network to fully benefit from SADR. it would also simplify the operation of the SADR domain.</t>
+				<t>
+				</t>
 
 			</list>
 		</t>
@@ -2024,12 +2059,12 @@ Prefix                 Precedence       Label
 	</t> 
 	<t>
 		It should be noted that multihomed enterprise network utilizing 
-		multiple ISP prefixes can be considered as a typical mutiple 
+		multiple ISP prefixes can be considered as a typical multiple 
 		provisioning domain (mPVD) scenario, as described in <xref 
-		target="RFC7556"/>. This document defines a way for network to provide 
+		target="RFC7556"/>. This document defines a way for the network to provide 
 		the PVD information to hosts indirectly, using the existing mechanisms. 
 		At the same time <xref 
-		target="I-D.ietf-intarea-provisioning-domains"/>takes one step further 
+		target="I-D.ietf-intarea-provisioning-domains"/> takes one step further 
 		and describes a comprehensive mechanism for hosts to discover the whole 
 		set of configuration information associated with different PVD/ISPs. 
 		<xref target="I-D.ietf-intarea-provisioning-domains"/> complements this 
@@ -2037,14 +2072,6 @@ Prefix                 Precedence       Label
 		states and selecting the corresponding source addresses. 
 	</t>
         </section>
-	<section anchor="sec_conn_pre" title="Connections Preservation">
-	<t>
-		The proposed solution is not designed to preserve connection state in case of an uplink failure. When all uplinks to an ISP go down all transport connections established to/from that ISP address space will be interrupted (unless the transport protocol has specific multihoming support). That behaviour is similar to the scenario of IPv4 multihoming with NAT when an uplink failure causes all connections to be NATed to completely different public IPv4 addresses. 
-	</t>
-	<t>
-		It should be noted that in case of IPv4 NAT-based multihoming uplink recovery could cause connection interruptions as well (unless packet forwarding is integrated with existing NAT sessions tracking so the egress interface for the existing sessions is not changed). However the proposed solution has a benefit of preserving the existing sessions during/after the failed uplink restoration. Unlike the uplink failure event which causes all addresses from the affected prefix to be deprecated the recovery would just add new preferred addresses to a host without making any addresses unavailable. Therefore connections estavlished to/from those addresses do not have to be interrupted.
-	</t>
-	</section>
 
     </section>
     <section anchor="sec_other_solutions" title="Other Solutions">
@@ -2089,13 +2116,13 @@ Prefix                 Precedence       Label
       <section anchor="sec_mpath"
 	      title="Multipath Transport">
 	      <t>
-			 Using multipath transport might solve the problems discussed in <xref 
+		      Using multipath transport (such as MPTCP, <xref target="RFC6824"/> or multipath capabilities in QUIC)  might solve the problems discussed in <xref 
 			target="sec_host_mechanisms"/> since it would allow hosts to use multiple 
 			source addresses for a single connection and switch between source 
 			addresses when a particular address becomes unavailable or a new address 
 			gets assigned to the host interface. Therefore if all hosts in the 
 			enterprise network are only using multipath transport for all 
-			connections, the signalling solution described in <xref 
+			connections, the signaling solution described in <xref 
 			target="sec_host_mechanisms"/> might not be needed (it should be noted 
 			that the Source Address Dependent Routing would still be required to 
 			deliver packets to the correct uplinks).
@@ -2104,7 +2131,7 @@ Prefix                 Precedence       Label
 			address in a multihomed environment. There are significant number of 
 			hosts which do not use multipath transport currently and it seems 
 			unlikely that the situation is going to change in any foreseeable 
-			future. The solution for enterprise multihoming needs to work for the 
+			future (even if new releases of operatin systems get multipath protocols support there will be a long tail of legacy hosts). The solution for enterprise multihoming needs to work for the 
 			least common denominator: hosts without multipath transport support. In 
 			addition, not all protocols are using multipath transport. While 
 			multipath transport would complement the solution described in <xref 
@@ -2135,10 +2162,7 @@ Prefix                 Precedence       Label
 
     <section anchor="Acknowledgements" title="Acknowledgements">
 	    <t>The original outline was suggested by Ole Troan.</t>
-	    <t>The authors would like to thank the following people (in alphabetical order) 
-		for their review and feedback: Olivier Bonaventure, Brian E Carpenter, Lorenzo Colitti, 
-        David Lamparter, Nicolai Leymann, Acee Lindem, Philip Matthewsu, Robert Raszuk, Dave Thaler,
-		Martin Vigoureux.
+	    <t>The authors would like to thank the following people (in alphabetical order) for their review and feedback: Olivier Bonaventure, Deborah Brungard, Brian E Carpenter, Lorenzo Colitti, Roman Danyliw, Benjamin Kaduk, Suresh Krishnan, Mirja Kühlewind, David Lamparter, Nicolai Leymann, Acee Lindem, Philip Matthewsu, Robert Raszuk, Alvaro Retana, Dave Thaler, Michael Tüxen, Martin Vigoureux, Éric Vyncke, Magnus Westerlund.
 	    </t>
     </section>
   </middle>
@@ -2162,6 +2186,7 @@ Prefix                 Precedence       Label
       <?rfc include="reference.RFC.4191" ?>
       <?rfc include="reference.RFC.4291" ?>
 
+      <?rfc include="reference.RFC.6106" ?>
       <?rfc include="reference.RFC.8106" ?>
 
       <?rfc include="reference.RFC.7556" ?>
@@ -2196,6 +2221,7 @@ Prefix                 Precedence       Label
       <?rfc include="reference.RFC.7676" ?>
 
       <?rfc include="reference.RFC.3704" ?>
+      <?rfc include="reference.RFC.6824" ?>
 	</references>
 
   </back>
