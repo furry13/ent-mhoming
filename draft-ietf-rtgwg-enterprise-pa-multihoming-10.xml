@@ -120,7 +120,7 @@
 to this problem for a broad range of enterprise topologies.
       It covers the behavior of routers to forward traffic taking into account
       source address, and it covers the behavior of hosts to select appropriate
-      source addresses. It also covers any possible role that routers might
+      default source addresses. It also covers any possible role that routers might
       play in providing information to hosts to help them select appropriate
       source addresses. In the process of exploring potential solutions, this
       document also makes explicit requirements for how the solution would be
@@ -240,10 +240,10 @@ to this problem for a broad range of enterprise topologies.
 		source-prefix-scoped routing advertisements are used to generate 
 		source-prefix-scoped forwarding tables. Instead, this detailed 
 		description is provided in <xref target="sec_method"/>. <xref target="sec_host_mechanisms"/> discusses existing and 
-		proposed mechanisms for hosts to select the source address applied to 
+		proposed mechanisms for hosts to select the default source address applied to 
 		packets. It also discusses the requirements for routing that are needed 
 		to support these enterprise network scenarios and the mechanisms by 
-		which hosts are expected to select source addresses dynamically based on network state.  
+		which hosts are expected to select source addresses for new connetions dynamically based on network state.  
 		<xref target="sec_deployment"/> discusses deployment considerations, while <xref target="sec_other_solutions"/> discusses other solutions.</t>
 
     </section>
@@ -1016,7 +1016,7 @@ D=::/0                    NH=R8
 ]]></artwork>
       </figure>
 
-      <t>As all SERs belong to the SADR domain any traffic that needs to exit the site will eventually hit a SADR-capable router.  To prevent routing loops involving SADR-capable and non-SADR-capable routers, traffic that enters the SADR-capable domain does not leave the domain until it exits the site. Therefore all SADR-capable routers with the domain MUST be logically connected.</t>
+      <t>As all SERs belong to the SADR domain any traffic that needs to exit the site will eventually hit a SADR-capable router.  To prevent routing loops involving SADR-capable and non-SADR-capable routers, traffic that enters the SADR-capable domain does not leave the domain until it exits the site. Therefore all SADR-capable routers within the domain MUST be logically connected.</t>
 
       <t>Note that the mechanism described here for converting
       source-prefix-scoped destination prefix routing advertisements into
@@ -1035,7 +1035,7 @@ D=::/0                    NH=R8
       the routers may play in providing information that helps hosts to choose
       source addresses.</t>
 <t>
-	It should be noted that this section discussed how hosts could select the source address for new connections. Any connection which already exists on a host is bound to the specific source address which can not be changed. <xref target="sec_conn_pre"/> discusses the connections preservation issue in more details.
+	It should be noted that this section discussed how hosts could select the default source address for new connections. Any connection which already exists on a host is bound to the specific source address which can not be changed. <xref target="sec_conn_pre"/> discusses the connections preservation issue in more details.
 </t>
 
       <t>Any host that needs to be able to send traffic using the uplinks to a
@@ -1082,7 +1082,7 @@ D=::/0                    NH=R8
       advertisements.</t>
 
       <t>First we look at how a host is currently expected to select the
-	      source and destination address with which it sends a packet for a new connection.</t>
+	      default source and destination addresses to be used for a new connection.</t>
 
       <section anchor="sec_host_address_selection_algo"
                title="Source Address Selection Algorithm on Hosts">
@@ -1232,8 +1232,12 @@ D=::/0                    NH=R8
         failed uplink has recovered. The last one is failure of both (all)
 	uplinks.</t>
 <t>
-	It should be noted that <xref target="RFC6724"/> defines the default behaviour for IPv6 hosts. The applications and uppler-layer protocols can make their own choices on selecting source addresses. 
-However the mechanism proposed in this document attempts to ensure that the subset of source addresses available for applications and upper-layer protocols is selected with the up-to-date network state in mind.
+	It should be noted that <xref target="RFC6724"/> 
+	only defines the behavior of IPv6
+hosts to select default addresses that applications and upper-layer
+protocols can use. Applications and upper-layer protocols can make their
+own choices on selecting source addresses.
+The mechanism proposed in this document attempts to ensure that the subset of source addresses available for applications and upper-layer protocols is selected with the up-to-date network state in mind. The rest of the document discusses various aspects of the default source address selection defined in  <xref target="RFC6724"/>, calling it for the sake of brevity "the source address selection". 
 </t>
       </section>
 
@@ -1324,7 +1328,7 @@ Prefix                 Precedence       Label
           an association between S=2001:db8:0:a000::/52 D=2001:db8:0:1234::/64
           would be needed.</t>
 
-          <t>However, Rule 5.5 of the source address selection algorithm (discussed
+          <t>However, Rule 5.5 of the default source address selection algorithm (discussed
 		  in <xref target="sec_host_address_selection_algo"/> above), 
 		  together with default router preference (specified in <xref
           target="RFC4191"/>) and RIO can be used to influence a source
@@ -1453,17 +1457,11 @@ Prefix                 Precedence       Label
           destinations in the same /64 as the original destination address.
           The source prefix to the destination mapping SHOULD have a specific lifetime. Expiration of the
           lifetime SHOULD trigger the source address selection algorithm
-          again.</t>
-
-          <t>Using ICMPv6 Destination Unreachable Messages with Code 5
-		  to influence source address selection allows an attacker to exhaust the list of candidate source
-          addresses on the host by sending spoofed ICMPv6 Code 5 for all
-          prefixes known on the network (therefore preventing a victim from
-          establishing a communication with the destination host). To protect
-          from an attack of this kind, hosts SHOULD verify that the original packet header
-          included into ICMPv6 error message was actually sent by the
-          host.</t>
-		  
+	  again.</t>
+  <t>
+	  Using ICMPv6 Destination Unreachable Messages with Code 5 to influence source address selection
+	  introduces some security challenges which are discussed in <xref target="Security"/>.
+  </t>
 		  		  
 		  <t> As currently standardized in <xref target="RFC4443"/>, the ICMPv6
 		  Destination Unreachable Message with Code 5 would allow for the
@@ -1925,7 +1923,7 @@ of this writing not widely implemented);</t>
           </list></t>
 
         <t>To fully benefit from the RA-based solution, first-hop routers need
-        to implement SADR and be able to send dedicated RAs per scoped
+        to implement SADR, belong to the SADR domain and be able to send dedicated RAs per scoped
         forwarding table as discussed above, reacting to network changes with
         sending new RAs. It should be noted that the proposed solution would
         work even if first-hop routers are not SADR-capable but still able
@@ -2049,6 +2047,9 @@ of this writing not widely implemented);</t>
 				<t>The SADR domain is usually limited by the multihomed site border.</t>
 				<t>The minimal deployable scenario requires enabling SADR on all SERs and including them into a single SADR domain.</t>
 				<t>As discussed in <xref target="sec_simple_not_dir_conn"/>, extending the connected SADR domain beyond that point down to the first-hop routers can produce more efficient forwarding paths and allow the network to fully benefit from SADR. it would also simplify the operation of the SADR domain.</t>
+				<t>
+					During the incremental SADR domain expansion from the SERs down towards first-hop routers it's important to ensure that at any moment of time all SADR-capable routers within the domain are logically connected (see <xref target="sec_method"/>).
+				</t>
 
 			</list>
 		</t>
@@ -2164,11 +2165,20 @@ of this writing not widely implemented);</t>
     <section anchor="Security" title="Security Considerations">
 	
 		<t> <xref target="sec_both_working_icmpv6"/> discusses a mechanism for 
-		controlling source address selection on hosts using ICMPv6 messages.  It describes how
-		an attacker could exploit this mechansim by sending spoofed ICMPv6 messages.  It
-		recommends that a given host verify the original packet header
-        included into ICMPv6 error message was actually sent by the host itself.
-	    </t>
+			controlling source address selection on hosts using ICMPv6 messages. 
+Using ICMPv6 to influence source address selection allows an attacker to exhaust the list of candidate source
+          addresses on the host by sending spoofed ICMPv6 Code 5 for all
+          prefixes known on the network (therefore preventing a victim from
+	  establishing a communication with the destination host).
+          Another possible attack vector is using ICMPv6 Destination Unreachable Messages with Code 5 to steer the egress tra
+ffic towards the particular ISP (for example if the attacker has the ability of doing traffic sniffing or man-in-the-middle attack in that ISP network).
+  </t>
+  <t>
+	  To prevent those attacks hosts SHOULD verify that the original packet header included into ICMPv6 error message was actually sent by the host (to ensure that the ICMPv6 message was triggered by a packet sent by the host). 
+  </t>
+  <t>
+	  As ICMPv6 Destination Unreachable Messages with Code 5 could be originated by any SADR-capable router within the domain (or even come from the Internet), GTSM (<xref target="RFC5082"/>) can not be applied. Filtering such ICMOv6 messages at the site border can not be recommended as it would break the legitimate end2end error signalling mechanism ICMPv6 is designed for.
+  </t>
 	    <t>
 		    The security considerations of using stateless address autoconfiguration are discussed in <xref target="RFC4862"/>.
 	    </t>
@@ -2231,6 +2241,7 @@ of this writing not widely implemented);</t>
       <?rfc include="reference.RFC.5533" ?>
 
       <?rfc include="reference.RFC.5534" ?>
+      <?rfc include="reference.RFC.5082" ?>
       <?rfc include="reference.RFC.6434" ?>
 
 
